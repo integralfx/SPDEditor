@@ -11,6 +11,7 @@ import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -143,7 +144,7 @@ public class SPDEditorGUI extends JFrame {
             txtns.setEditable(false);
             panel.add(txtns);
             JTextField txtTicks = new JTextField(3);
-            txtTicks.addActionListener(new ActionListener(){
+            txtTicks.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     boolean valid = true;
@@ -179,6 +180,45 @@ public class SPDEditorGUI extends JFrame {
             nameTextFieldMap.put(name, 
                                  new TextFieldPair(txtns, txtTicks));
         }
+        panel = new JPanel();
+        JButton btnSet = new JButton("Set");
+        btnSet.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                for (Map.Entry<String, TextFieldPair> entry : 
+                     nameTextFieldMap.entrySet()) {
+                    JTextField txt = entry.getValue().right;
+                    String name = entry.getKey(),
+                           input = txt.getText();
+                    boolean valid = true;
+                    try {
+                        int t = Integer.valueOf(input);
+                        if (t < 0) valid = false;
+                        else if (name.equals("tCL")) {
+                            if (t < 4 || t > 18) valid = false;
+                            else {
+                                spd.setTiming(name, t);
+                                if (clCheckBoxMap.containsKey(t))
+                                    clCheckBoxMap.get(t).setSelected(true);
+                            }
+                        }
+                        else spd.setTiming(name, t);
+
+                        updateTimingsText();
+                    }
+                    catch (NumberFormatException ex) {
+                        valid = false;
+                    }
+
+                    if (valid)
+                        txt.setBackground(Color.WHITE);
+                    else
+                        txt.setBackground(new Color(255, 100, 100));
+                }
+            }
+        });
+        panel.add(btnSet);
+        timingsPanel.add(panel);
         timingsPanel.setBorder(BorderFactory.createTitledBorder(b, "Timings"));
         add(timingsPanel);
 
