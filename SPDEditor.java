@@ -112,11 +112,14 @@ public class SPDEditor {
         double tCKns = tCKmin/8.0 + tCKminCorrection/1000.0;
         tCKns = getMorePrecisetCKns(tCKns);
 
-        double tCLns = tCLmin/8.0 + tCLminCorrection/1000.0,
+        double tCLns = Byte.toUnsignedInt(tCLmin)/8.0 + 
+                       tCLminCorrection/1000.0,
                tCL = Math.round(tCLns/tCKns),
-               tRCDns = tRCDmin/8.0 + tRCDminCorrection/1000.0,
+               tRCDns = Byte.toUnsignedInt(tRCDmin)/8.0 + 
+                        tRCDminCorrection/1000.0,
                tRCD = Math.round(tRCDns/tCKns),
-               tRPns = tRPmin/8.0 + tRPminCorrection/1000.0,
+               tRPns = Byte.toUnsignedInt(tRPmin)/8.0 + 
+                       tRPminCorrection/1000.0,
                tRP = Math.round(tRPns/tCKns),
                tRASns = Integer.toUnsignedLong(tRASmin)/8.0,
                tRAS = Math.round(tRASns/tCKns),
@@ -125,15 +128,15 @@ public class SPDEditor {
                tRC = Math.round(tRCns/tCKns),
                tRFCns = Integer.toUnsignedLong(tRFCmin)/8.0,
                tRFC = Math.round(tRFCns/tCKns),
-               tRRDns = tRRDmin/8.0,
+               tRRDns = Byte.toUnsignedInt(tRRDmin)/8.0,
                tRRD = Math.round(tRRDns/tCKns),
                tFAWns = Integer.toUnsignedLong(tFAWmin)/8.0,
                tFAW = Math.round(tFAWns/tCKns),
-               tWRns = tWRmin/8.0,
+               tWRns = Byte.toUnsignedInt(tWRmin)/8.0,
                tWR = Math.round(tWRns/tCKns),
-               tWTRns = tWTRmin/8.0,
+               tWTRns = Byte.toUnsignedInt(tWTRmin)/8.0,
                tWTR = Math.round(tWTRns/tCKns),
-               tRTPns = tRTPmin/8.0,
+               tRTPns = Byte.toUnsignedInt(tRTPmin)/8.0,
                tRTP = Math.round(tRTPns/tCKns);
 
         timings.put("tCL", (int)tCL);
@@ -207,14 +210,9 @@ public class SPDEditor {
         return true;
     }
 
-    public int setTimings(LinkedHashMap<String, Integer> timings) {
-        int count = 0;
-        for (Map.Entry<String, Integer> e : timings.entrySet()) {
-            if (setTiming(e.getKey(), e.getValue()))
-                count++;
-        }
-
-        return count;
+    public void setTimings(LinkedHashMap<String, Integer> timings) {
+        for (Map.Entry<String, Integer> e : timings.entrySet())
+            setTiming(e.getKey(), e.getValue());
     }
 
     public void printTimings() {
@@ -227,7 +225,6 @@ public class SPDEditor {
         updateBytes();
 
         short crc = crc16XModem();
-        System.out.printf("CRC: %X", crc);
         // little endian - LSB goes last
         bytes[0x7F] = (byte)((crc >> 8) & 0xFF);
         bytes[0x7E] = (byte)(crc & 0xFF);

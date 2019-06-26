@@ -11,6 +11,7 @@ import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -21,6 +22,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
@@ -28,6 +30,7 @@ import javax.swing.border.Border;
 public class SPDEditorGUI extends JFrame {
     private SPDEditor spd;
     private JLabel lblSPDFile;
+    private JRadioButton rdoTime, rdoCycles;
     private JTextField txtFrequencyns, txtFrequency;
     private LinkedHashMap<String, TextFieldPair> nameTextFieldMap;
     private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap;
@@ -81,9 +84,15 @@ public class SPDEditorGUI extends JFrame {
                          * frequency, then update with the timings that we have
                          * saved.
                          */
-                        //LinkedHashMap<String, Integer> t = spd.getTimings();
-                        spd.setFrequency(f);
-                        //spd.setTimings(t);
+                        if (rdoCycles.isSelected()) {
+                            LinkedHashMap<String, Integer> t = spd.getTimings();
+                            spd.setFrequency(f);
+                            spd.setTimings(t);
+                        }
+                        else if (rdoTime.isSelected()) {
+                            spd.setFrequency(f);
+                        }
+
                         updateTimingsText();
                     }
                 }
@@ -98,6 +107,21 @@ public class SPDEditorGUI extends JFrame {
             }
         });
         panel.add(txtFrequency);
+        add(panel);
+
+        panel = new JPanel();
+        rdoTime = new JRadioButton("Scale from time (ns)");
+        rdoTime.setToolTipText("Keeps the same absolute time in ns when " + 
+                               "changing frequency.");
+        rdoCycles = new JRadioButton("Scale from cycles (ticks)");
+        rdoCycles.setToolTipText("Keeps the same amount of cycles in ticks " + 
+                                 "when changing frequency.");
+        rdoTime.setSelected(true);
+        ButtonGroup group = new ButtonGroup();
+        group.add(rdoTime);
+        group.add(rdoCycles);
+        panel.add(rdoTime);
+        panel.add(rdoCycles);
         add(panel);
 
         panel = new JPanel();
@@ -156,8 +180,10 @@ public class SPDEditorGUI extends JFrame {
                             if (t < 4 || t > 18) valid = false;
                             else {
                                 spd.setTiming(name, t);
-                                if (clCheckBoxMap.containsKey(t))
+                                if (clCheckBoxMap.containsKey(t)) {
                                     clCheckBoxMap.get(t).setSelected(true);
+                                    spd.setSupportedCL(t, true);
+                                }
                             }
                         }
                         else spd.setTiming(name, t);
@@ -198,8 +224,10 @@ public class SPDEditorGUI extends JFrame {
                             if (t < 4 || t > 18) valid = false;
                             else {
                                 spd.setTiming(name, t);
-                                if (clCheckBoxMap.containsKey(t))
+                                if (clCheckBoxMap.containsKey(t)) {
                                     clCheckBoxMap.get(t).setSelected(true);
+                                    spd.setSupportedCL(t, true);
+                                }
                             }
                         }
                         else spd.setTiming(name, t);
