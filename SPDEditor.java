@@ -33,6 +33,27 @@ public class SPDEditor {
     private byte tRPminCorrection;  // 0x25
     private byte tRCminCorrection;  // 0x26
 
+    public static void main(String[] args) {
+        /*
+        try {
+            File f = new File("c-die_2133C11-13-12.bin");
+            SPDEditor spd = new SPDEditor(Files.readAllBytes(f.toPath()));
+
+            spd.setFrequency(800);
+            spd.setTiming("tCL", 10);
+            spd.setTiming("tRCD", 10);
+            spd.setTiming("tRP", 10);
+            spd.setTiming("tRAS", 30);
+            spd.setSupportedCL(11, false);
+            spd.save("test.bin");
+        }
+        catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
+        }
+        */
+    }
+
     public SPDEditor(byte[] bytes) throws IllegalArgumentException {
         if (bytes.length < 128) {
             throw new IllegalArgumentException("Expected 128 bytes. Got " + 
@@ -78,6 +99,17 @@ public class SPDEditor {
         tRCDminCorrection = bytes[0x24];
         tRPminCorrection = bytes[0x25];
         tRCminCorrection = bytes[0x26];
+    }
+
+    public LinkedHashMap<String, Boolean> getVoltages() {
+        return voltages;
+    }
+
+    public boolean setVoltage(String voltage, boolean enabled) {
+        if (!voltages.containsKey(voltage)) return false;
+
+        voltages.put(voltage, enabled);
+        return true;
     }
 
     public double getFrequency() { 
@@ -309,26 +341,5 @@ public class SPDEditor {
         bytes[0x24] = tRCDminCorrection;
         bytes[0x25] = tRPminCorrection;
         bytes[0x26] = tRCminCorrection;
-    }
-
-    public static void main(String[] args) {
-        /*
-        try {
-            File f = new File("c-die_2133C11-13-12.bin");
-            SPDEditor spd = new SPDEditor(Files.readAllBytes(f.toPath()));
-
-            spd.setFrequency(800);
-            spd.setTiming("tCL", 10);
-            spd.setTiming("tRCD", 10);
-            spd.setTiming("tRP", 10);
-            spd.setTiming("tRAS", 30);
-            spd.setSupportedCL(11, false);
-            spd.save("test.bin");
-        }
-        catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-        }
-        */
     }
 }

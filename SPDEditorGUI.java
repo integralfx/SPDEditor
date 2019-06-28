@@ -34,6 +34,7 @@ public class SPDEditorGUI extends JFrame {
     private JTextField txtFrequencyns, txtFrequency;
     private LinkedHashMap<String, TextFieldPair> nameTextFieldMap;
     private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap;
+    private LinkedHashMap<String, JCheckBox> voltageCheckBoxMap;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new SPDEditorGUI());
@@ -70,6 +71,9 @@ public class SPDEditorGUI extends JFrame {
         txtFrequency.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if (spd == null) 
+                    showErrorMsg("Please open an SPD file.");
+
                 boolean valid = true;
                 String s = txtFrequency.getText();
                 try {
@@ -125,6 +129,25 @@ public class SPDEditorGUI extends JFrame {
         add(panel);
 
         panel = new JPanel();
+        voltageCheckBoxMap = new LinkedHashMap<>();
+        String[] voltages = { "1.25v", "1.35v", "1.50v" };
+        for (String v : voltages) {           
+            JCheckBox chk = new JCheckBox(v);
+            chk.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (spd == null) 
+                        showErrorMsg("Please open an SPD file.");
+
+                    spd.setVoltage(v, chk.isSelected());
+                }
+            });
+            panel.add(chk);
+            voltageCheckBoxMap.put(v, chk);
+        }
+        add(panel);
+
+        panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         clCheckBoxMap = new LinkedHashMap<>();
         int cl = 4;
@@ -137,6 +160,9 @@ public class SPDEditorGUI extends JFrame {
                 chk.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        if (spd == null) 
+                            showErrorMsg("Please open an SPD file.");
+
                         spd.setSupportedCL(Integer.valueOf(chk.getText()), 
                                            chk.isSelected());
                     }
@@ -171,6 +197,9 @@ public class SPDEditorGUI extends JFrame {
             txtTicks.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    if (spd == null) 
+                        showErrorMsg("Please open an SPD file.");
+
                     boolean valid = true;
                     String s = txtTicks.getText();
                     try {
@@ -211,6 +240,9 @@ public class SPDEditorGUI extends JFrame {
         btnSet.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if (spd == null) 
+                    showErrorMsg("Please open an SPD file.");
+
                 for (Map.Entry<String, TextFieldPair> entry : 
                      nameTextFieldMap.entrySet()) {
                     JTextField txt = entry.getValue().right;
@@ -320,6 +352,13 @@ public class SPDEditorGUI extends JFrame {
             txtFrequencyns.setText(String.format("%.3f", 1000/f));
             txtFrequency.setText(String.format("%.2f", f));
     
+            LinkedHashMap<String, Boolean> voltages = spd.getVoltages();
+            for (Map.Entry<String, Boolean> e : voltages.entrySet()) {
+                if (voltageCheckBoxMap.containsKey(e.getKey()))
+                    voltageCheckBoxMap.get(e.getKey())
+                                      .setSelected(e.getValue());
+            }
+
             // update supported CLs
             LinkedHashMap<Integer, Boolean> cls = spd.getSupportedCLs();
             for (Map.Entry<Integer, Boolean> e : cls.entrySet()) {
