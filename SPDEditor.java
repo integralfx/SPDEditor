@@ -186,7 +186,6 @@ public class SPDEditor {
         return timings;
     }
 
-    // call setFrequency() before calling setTiming()
     public boolean setTiming(String timing, int ticks) {
         if (ticks < 1) return false;
 
