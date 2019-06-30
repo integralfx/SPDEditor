@@ -9,32 +9,20 @@ import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import javax.swing.border.Border;
 
 public class SPDEditorGUI extends JFrame {
-    private SPDEditor spd;
-    private JLabel lblSPDFile;
-    private JRadioButton rdoTime, rdoCycles;
-    private JTextField txtFrequencyns, txtFrequency;
-    private LinkedHashMap<String, TextFieldPair> nameTextFieldMap;
-    private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap;
+    private JComboBox<Integer> cboXMPNo;
+    private JLabel lblSPDFile, lblXMP;
+    private JRadioButton rdoTime, rdoCycles, rdoXMPTime, rdoXMPCycles;
+    private JSpinner spnXMPVoltage;
+    private JTabbedPane tabbedPane;
+    private JTextField txtFrequencyns, txtFrequency, txtXMPFrequencyns, txtXMPFrequency;
+    private LinkedHashMap<String, TextFieldPair> nameTextFieldMap, XMPnameTextFieldMap;
+    private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap, XMPclCheckBoxMap;
     private LinkedHashMap<String, JCheckBox> voltageCheckBoxMap;
+    private SPDEditor spd;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new SPDEditorGUI());
@@ -45,20 +33,34 @@ public class SPDEditorGUI extends JFrame {
 
         addMenuBar();
 
-        setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+        tabbedPane = new JTabbedPane();
+        addSPDTab();
+        addXMPTab();
+        add(tabbedPane);
+
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        pack();
+        setLocationRelativeTo(null);
+        setResizable(false);
+        setVisible(true);
+    }
+
+    private void addSPDTab() {
+        JPanel panelSPD = new JPanel();
+        panelSPD.setLayout(new BoxLayout(panelSPD, BoxLayout.Y_AXIS));
 
         JPanel panel = new JPanel();
         lblSPDFile = new JLabel("No SPD file opened");
         panel.add(lblSPDFile);
-        add(panel);
+        panelSPD.add(panel);
 
         Frequency[] frequencies = {
-            new Frequency(1200/3.0), // 400
-            new Frequency(1600/3.0), // 533.33...
-            new Frequency(2000/3.0), // 666.66...
-            new Frequency(2400/3.0), // 800
-            new Frequency(2800/3.0), // 933.33...
-            new Frequency(3200/3.0)  // 1066.66...
+                new Frequency(1200/3.0), // 400
+                new Frequency(1600/3.0), // 533.33...
+                new Frequency(2000/3.0), // 666.66...
+                new Frequency(2400/3.0), // 800
+                new Frequency(2800/3.0), // 933.33...
+                new Frequency(3200/3.0)  // 1066.66...
         };
         panel = new JPanel();
         panel.add(new JLabel("Frequency:"));
@@ -71,7 +73,7 @@ public class SPDEditorGUI extends JFrame {
         txtFrequency.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (spd == null) 
+                if (spd == null)
                     showErrorMsg("Please open an SPD file.");
 
                 boolean valid = true;
@@ -82,8 +84,8 @@ public class SPDEditorGUI extends JFrame {
                     else {
                         txtFrequencyns.setText(String.format("%.3f", 1000/f));
                         /*
-                         * Timings are calculated from the cycle time (ns), 
-                         * which don't change when changing frequency. 
+                         * Timings are calculated from the cycle time (ns),
+                         * which don't change when changing frequency.
                          * Thus, we have to save the timings, update the
                          * frequency, then update with the timings that we have
                          * saved.
@@ -111,32 +113,30 @@ public class SPDEditorGUI extends JFrame {
             }
         });
         panel.add(txtFrequency);
-        add(panel);
+        panelSPD.add(panel);
 
         panel = new JPanel();
         rdoTime = new JRadioButton("Scale from time (ns)");
-        rdoTime.setToolTipText("Keeps the same absolute time in ns when " + 
-                               "changing frequency.");
-        rdoCycles = new JRadioButton("Scale from cycles (ticks)");
-        rdoCycles.setToolTipText("Keeps the same amount of cycles in ticks " + 
-                                 "when changing frequency.");
+        rdoTime.setToolTipText("Keeps the same absolute time in ns when changing frequency.");
         rdoTime.setSelected(true);
+        panel.add(rdoTime);
+        rdoCycles = new JRadioButton("Scale from cycles (ticks)");
+        rdoCycles.setToolTipText("Keeps the same amount of cycles in ticks when changing frequency.");
+        panel.add(rdoCycles);
         ButtonGroup group = new ButtonGroup();
         group.add(rdoTime);
         group.add(rdoCycles);
-        panel.add(rdoTime);
-        panel.add(rdoCycles);
-        add(panel);
+        panelSPD.add(panel);
 
         panel = new JPanel();
         voltageCheckBoxMap = new LinkedHashMap<>();
         String[] voltages = { "1.25v", "1.35v", "1.50v" };
-        for (String v : voltages) {           
+        for (String v : voltages) {
             JCheckBox chk = new JCheckBox(v);
             chk.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (spd == null) 
+                    if (spd == null)
                         showErrorMsg("Please open an SPD file.");
 
                     spd.setVoltage(v, chk.isSelected());
@@ -145,7 +145,7 @@ public class SPDEditorGUI extends JFrame {
             panel.add(chk);
             voltageCheckBoxMap.put(v, chk);
         }
-        add(panel);
+        panelSPD.add(panel);
 
         panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -160,10 +160,10 @@ public class SPDEditorGUI extends JFrame {
                 chk.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        if (spd == null) 
+                        if (spd == null)
                             showErrorMsg("Please open an SPD file.");
-
-                        spd.setSupportedCL(Integer.valueOf(chk.getText()), chk.isSelected());
+                        else
+                            spd.setSupportedCL(Integer.valueOf(chk.getText()), chk.isSelected());
                     }
                 });
                 p.add(chk);
@@ -174,14 +174,14 @@ public class SPDEditorGUI extends JFrame {
         }
         Border b = BorderFactory.createLineBorder(Color.BLACK);
         panel.setBorder(BorderFactory.createTitledBorder(b, "Supported CLs"));
-        add(panel);
+        panelSPD.add(panel);
 
         JPanel timingsPanel = new JPanel(new GridLayout(6, 2, 10, 10));
         String[] timingNames = {
-            "tCL", "tRCD", "tRP", "tRAS", "tRC","tRFC", 
-            "tRRD", "tFAW", "tWR", "tWTR", "tRTP"
+                "tCL", "tRCD", "tRP", "tRAS", "tRC","tRFC",
+                "tRRD", "tFAW", "tWR", "tWTR", "tRTP"
         };
-        nameTextFieldMap = new LinkedHashMap<>();
+        XMPnameTextFieldMap = new LinkedHashMap<>();
         for (String name : timingNames) {
             panel = new JPanel();
 
@@ -196,7 +196,7 @@ public class SPDEditorGUI extends JFrame {
             txtTicks.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (spd == null) 
+                    if (spd == null)
                         showErrorMsg("Please open an SPD file.");
 
                     boolean valid = true;
@@ -231,20 +231,20 @@ public class SPDEditorGUI extends JFrame {
             panel.add(txtTicks);
             timingsPanel.add(panel);
 
-            nameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
+            XMPnameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
         }
         panel = new JPanel();
         JButton btnSet = new JButton("Set");
         btnSet.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (spd == null) 
+                if (spd == null)
                     showErrorMsg("Please open an SPD file.");
 
                 for (Map.Entry<String, TextFieldPair> entry : nameTextFieldMap.entrySet()) {
                     JTextField txt = entry.getValue().right;
                     String name = entry.getKey(),
-                           input = txt.getText();
+                            input = txt.getText();
                     boolean valid = true;
                     try {
                         int t = Integer.valueOf(input);
@@ -277,13 +277,208 @@ public class SPDEditorGUI extends JFrame {
         panel.add(btnSet);
         timingsPanel.add(panel);
         timingsPanel.setBorder(BorderFactory.createTitledBorder(b, "Timings"));
-        add(timingsPanel);
+        panelSPD.add(timingsPanel);
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        pack();
-        setLocationRelativeTo(null);
-        setResizable(false);
-        setVisible(true);
+        tabbedPane.addTab("SPD", panelSPD);
+    }
+
+    private void addXMPTab() {
+        JPanel panelXMP = new JPanel();
+        panelXMP.setLayout(new BoxLayout(panelXMP, BoxLayout.Y_AXIS));
+
+        JPanel panel = new JPanel();
+        lblXMP = new JLabel("No XMP");
+        panel.add(lblXMP);
+        cboXMPNo = new JComboBox<>(new Integer[]{ 0, 1 });
+        // TODO
+        cboXMPNo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+            }
+        });
+        panel.add(cboXMPNo);
+        panelXMP.add(panel);
+
+        panel = new JPanel();
+        panel.add(new JLabel("Frequency:"));
+        txtXMPFrequencyns = new JTextField(5);
+        txtXMPFrequencyns.setEditable(false);
+        panel.add(txtXMPFrequencyns);
+        txtXMPFrequency = new JTextField(5);
+        // TODO
+        txtXMPFrequency.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+            }
+        });
+        panel.add(txtXMPFrequency);
+        panelXMP.add(panel);
+
+        panel = new JPanel();
+        rdoXMPTime = new JRadioButton("Scale from time (ns)");
+        rdoXMPTime.setToolTipText("Keeps the same absolute time in ns when changing frequency.");
+        rdoXMPTime.setSelected(true);
+        panel.add(rdoXMPTime);
+        rdoXMPCycles = new JRadioButton("Scale from cycles (ticks)");
+        rdoXMPCycles.setToolTipText("Keeps the same amount of cycles in ticks when changing frequency.");
+        panel.add(rdoXMPCycles);
+        ButtonGroup group = new ButtonGroup();
+        group.add(rdoXMPTime);
+        group.add(rdoXMPCycles);
+        panelXMP.add(panel);
+
+        panel = new JPanel();
+        panel.add(new JLabel("Voltage:"));
+        SpinnerNumberModel model = new SpinnerNumberModel(1.20, 1.20, 2.00, 0.05);
+        spnXMPVoltage = new JSpinner(model);
+        ((JSpinner.DefaultEditor)spnXMPVoltage.getEditor()).getTextField().setEditable(false);
+        panel.add(spnXMPVoltage);
+        panelXMP.add(panel);
+
+        panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        XMPclCheckBoxMap = new LinkedHashMap<>();
+        int cl = 4;
+        for (int row = 0; row < 3; row++) {
+            JPanel p = new JPanel();
+            for (int col = 0; col < 5; col++) {
+                if (cl > 18) break;
+
+                JCheckBox chk = new JCheckBox(String.valueOf(cl));
+                chk.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        if (spd == null)
+                            showErrorMsg("Please open an SPD file.");
+                        else if (spd.getXMP() == null)
+                            showErrorMsg("No XMPs found.");
+                        else {
+                            // TODO: enable CL in selected XMP
+                        }
+                    }
+                });
+                p.add(chk);
+                XMPclCheckBoxMap.put(cl, chk);
+                cl++;
+            }
+            panel.add(p);
+        }
+        Border b = BorderFactory.createLineBorder(Color.BLACK);
+        panel.setBorder(BorderFactory.createTitledBorder(b, "Supported CLs"));
+        panelXMP.add(panel);
+
+        JPanel timingsPanel = new JPanel(new GridLayout(7, 2, 10, 10));
+        String[] timingNames = {
+                "tCL", "tRCD", "tRP", "tRAS", "tRC","tRFC",
+                "tRRD", "tFAW", "tWR", "tWTR", "tRTP", "tCWL", "tREFI"
+        };
+        XMPnameTextFieldMap = new LinkedHashMap<>();
+        for (String name : timingNames) {
+            panel = new JPanel();
+
+            JLabel lbl = new JLabel(name + ":");
+            lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
+            panel.add(lbl);
+
+            JTextField txtns = new JTextField(5);
+            txtns.setEditable(false);
+            panel.add(txtns);
+            JTextField txtTicks = new JTextField(3);
+            txtTicks.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (spd == null)
+                        showErrorMsg("Please open an SPD file.");
+                    else if (spd.getXMP() == null)
+                        showErrorMsg("No XMPs found.");
+                    else {
+                        boolean valid = true;
+                        String s = txtTicks.getText();
+                        try {
+                            int t = Integer.valueOf(s);
+                            if (t < 0) valid = false;
+                            else if (name.equals("tCL")) {
+                                if (t < 4 || t > 18) valid = false;
+                                else {
+                                    //spd.setTiming(name, t);
+                                    if (XMPclCheckBoxMap.containsKey(t)) {
+                                        XMPclCheckBoxMap.get(t).setSelected(true);
+                                        // TODO: enable CL in selected XMP
+                                    }
+                                }
+                            }
+                            //else spd.setTiming(name, t);
+
+                            //updateTimingsText();
+                        }
+                        catch (NumberFormatException ex) {
+                            valid = false;
+                        }
+
+                        if (valid)
+                            txtTicks.setBackground(Color.WHITE);
+                        else
+                            txtTicks.setBackground(new Color(255, 100, 100));
+                    }
+                }
+            });
+            panel.add(txtTicks);
+            timingsPanel.add(panel);
+
+            XMPnameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
+        }
+        panel = new JPanel();
+        JButton btnSet = new JButton("Set");
+        btnSet.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (spd == null)
+                    showErrorMsg("Please open an SPD file.");
+                else if (spd.getXMP() == null)
+                    showErrorMsg("No XMPs found.");
+                else {
+                    for (Map.Entry<String, TextFieldPair> entry : XMPnameTextFieldMap.entrySet()) {
+                        JTextField txt = entry.getValue().right;
+                        String name = entry.getKey(),
+                                input = txt.getText();
+                        boolean valid = true;
+                        try {
+                            int t = Integer.valueOf(input);
+                            if (t < 0) valid = false;
+                            else if (name.equals("tCL")) {
+                                if (t < 4 || t > 18) valid = false;
+                                else {
+                                    //spd.setTiming(name, t);
+                                    if (XMPclCheckBoxMap.containsKey(t)) {
+                                        XMPclCheckBoxMap.get(t).setSelected(true);
+                                        // TODO: set timing in selected XMP
+                                    }
+                                }
+                            }
+                            //else spd.setTiming(name, t);
+
+                            //updateTimingsText();
+                        }
+                        catch (NumberFormatException ex) {
+                            valid = false;
+                        }
+
+                        if (valid)
+                            txt.setBackground(Color.WHITE);
+                        else
+                            txt.setBackground(new Color(255, 100, 100));
+                    }
+                }
+            }
+        });
+        panel.add(btnSet);
+        timingsPanel.add(panel);
+        timingsPanel.setBorder(BorderFactory.createTitledBorder(b, "Timings"));
+        panelXMP.add(timingsPanel);
+
+        tabbedPane.addTab("XMP", panelXMP);
     }
 
     private void addMenuBar() {

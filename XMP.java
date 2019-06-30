@@ -53,6 +53,15 @@ public class XMP {
         }
     }
 
+    public Profile[] getProfiles() { return profile; }
+
+    public void setProfile(int index, Profile p) {
+        if (index >= 0 && index <= 1 && profile != null) {
+            profile[index] = p;
+            profileEnabled[index] = true;
+        }
+    }
+
     public byte[] getBytes() {
         updateBytes();
         return bytes;

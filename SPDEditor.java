@@ -110,6 +110,8 @@ public class SPDEditor {
         }
     }
 
+    public XMP getXMP() { return xmp; }
+
     public LinkedHashMap<String, Boolean> getVoltages() { return voltages; }
 
     public boolean setVoltage(String voltage, boolean enabled) {
