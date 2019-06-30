@@ -3,14 +3,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class XMP {
-    // starts at 0x176 of SPD
-    public static final int SIZE = 79;
+    // starts at 176 of SPD
+    public static final int SIZE = 79, 
+                            PROFILE1_OFFSET = 9,    // relative to start of
+                            PROFILE2_OFFSET = 44;   // XMP data
     private byte[] bytes;
-    private boolean[] profileEnabled;   // 0x178, bits 0 and 1
-    private byte[] dimmsPerChannel;     // 0x178, bits[2:3] and bits[4:5]
-    private byte version;               // 0x179, bits[4:7] | bits[3:0]
-    private MTB[] mtb;                  // (0x180, 0x181), (0x182, 0x183)
-    private Profile[] profile;          // [0x185, 0x219], [0x220, 0x254]
+    private boolean[] profileEnabled;   // 178, bits 0 and 1
+    private byte[] dimmsPerChannel;     // 178, bits[2:3] and bits[4:5]
+    private byte version;               // 179, bits[4:7] | bits[3:0]              
+    private Profile[] profile;          // [185, 219], [220, 254]
 
     public XMP(byte[] bytes) throws IllegalArgumentException {
         if (bytes.length < SIZE) {
@@ -36,22 +37,49 @@ public class XMP {
 
         version = bytes[3];
 
-        mtb = new MTB[] {
-            new MTB(bytes[4], bytes[5]),
-            new MTB(bytes[5], bytes[6])
-        };
-
         if (profileEnabled[0] || profileEnabled[1]) {
             profile = new Profile[2];
 
             if (profileEnabled[0]) {
-                byte[] b = Arrays.copyOfRange(bytes, 0x185, 0x220);
-                profile[0] = new Profile(b, mtb[0]);
+                byte[] b = Arrays.copyOfRange(bytes, PROFILE1_OFFSET, 
+                                              PROFILE2_OFFSET);
+                profile[0] = new Profile(b, new MTB(bytes[4], bytes[5]));
             }
 
             if (profileEnabled[1]) {
-                byte[] b = Arrays.copyOfRange(bytes, 0x220, 0x255);
-                profile[1] = new Profile(b, mtb[1]);
+                byte[] b = Arrays.copyOfRange(bytes, PROFILE2_OFFSET, SIZE);
+                profile[1] = new Profile(b, new MTB(bytes[5], bytes[6]));
+            }
+        }
+    }
+
+    public byte[] getBytes() {
+        updateBytes();
+        return bytes;
+    }
+
+    private void updateBytes() {
+        if (profileEnabled[0]) bytes[2] = (byte)1;
+        if (profileEnabled[1]) bytes[2] |= (byte)(1 << 1);
+
+        bytes[2] = (byte)((dimmsPerChannel[0] & 0x3) << 2 |
+                          (dimmsPerChannel[1] & 0x3) << 4);
+
+        bytes[3] = version;
+
+        if (profile != null) {
+            if (profileEnabled[0]) {
+                System.arraycopy(profile[0].getBytes(), 0, bytes, PROFILE1_OFFSET, Profile.SIZE);
+                MTB mtb = profile[0].getMTB();
+                bytes[4] = mtb.dividend;
+                bytes[5] = mtb.divisor;
+            }
+
+            if (profileEnabled[1]) {
+                System.arraycopy(profile[1].getBytes(), 0, bytes, PROFILE2_OFFSET, Profile.SIZE);
+                MTB mtb = profile[1].getMTB();
+                bytes[6] = mtb.dividend;
+                bytes[7] = mtb.divisor;
             }
         }
     }
@@ -66,14 +94,17 @@ public class XMP {
 
         // returns the MTB time in ns
         public double getTime() {
+            if (divisor == 0) return 0;
+
             return 1.0 * Byte.toUnsignedInt(dividend) /
                          Byte.toUnsignedInt(divisor);
         }
     }
 
     class Profile {
+        public static final int SIZE = 35;
         private byte[] bytes;
-        private MTB mtb;
+        private MTB mtb;        // (180, 181), (182, 183). not in bytes
         private int voltage;    // in mV. 185, 220
         private byte tCKmin;    // 186, 221
         private byte tCLmin;    // 187, 222
@@ -98,8 +129,8 @@ public class XMP {
         private byte tWTRmin;   // 205, 240
 
         public Profile(byte[] bytes, MTB mtb) throws IllegalArgumentException {
-            if (bytes.length < 33) {
-                String msg = "Profile must be at least 33 bytes.";
+            if (bytes.length != SIZE) {
+                String msg = "Profile must be " + SIZE + " bytes.";
                 throw new IllegalArgumentException(msg);
             }
 
@@ -268,10 +299,53 @@ public class XMP {
                 setTiming(e.getKey(), e.getValue());
         }
 
-        public byte[] getBytes() { return bytes; }
+        public byte[] getBytes() { 
+            updateBytes();
+            return bytes; 
+        }
 
         private void updateBytes() {
-            
+            String v = String.valueOf(voltage);
+            if (v.charAt(v.length() - 1) == '5')
+                bytes[0] = (byte)1;
+            else bytes[0] = 0;
+            bytes[0] |= (voltage % 10) << 1;
+            bytes[0] |= ((voltage % 100) & 0x3) << 5;
+
+            bytes[1] = tCKmin;
+            bytes[2] = tCLmin;
+
+            int n = 0;
+            for (int i = 4; i <= 11; i++) {
+                int index = i - 4;
+                if (supportedCLs.get(i)) n |= (1 << index);
+            }
+            bytes[3] = (byte)n;
+            n = 0;
+            for (int i = 12; i <= 18; i++) {
+                int index = i - 12;
+                if (supportedCLs.get(i)) n |= (1 << index);
+            }
+            bytes[4] = (byte)n;
+
+            bytes[5] = tCWLmin;
+            bytes[6] = tRPmin;
+            bytes[7] = tRCDmin;
+            bytes[8] = tWRmin;
+            byte upperNibble = (byte)(tRCmin >> 8 & 0xF),
+                 lowerNibble = (byte)(tRASmin >> 8 & 0xF);
+            bytes[9] = (byte)(upperNibble << 4 | lowerNibble);
+            bytes[10] = (byte)(tRASmin & 0xFF);
+            bytes[11] = (byte)(tRCmin & 0xFF);
+            bytes[12] = (byte)(tREFImax & 0xFF);
+            bytes[13] = (byte)(tREFImax >> 8 & 0xFF);
+            bytes[14] = (byte)(tRFCmin & 0xFF);
+            bytes[15] = (byte)(tRFCmin >> 8 & 0xFF);
+            bytes[16] = tRTPmin;
+            bytes[17] = tRRDmin;
+            bytes[18] = (byte)(tFAWmin >> 8 & 0xF);
+            bytes[19] = (byte)(tFAWmin & 0xFF);
+            bytes[20] = tWTRmin;
         }
     }
 }

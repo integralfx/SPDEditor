@@ -163,8 +163,7 @@ public class SPDEditorGUI extends JFrame {
                         if (spd == null) 
                             showErrorMsg("Please open an SPD file.");
 
-                        spd.setSupportedCL(Integer.valueOf(chk.getText()), 
-                                           chk.isSelected());
+                        spd.setSupportedCL(Integer.valueOf(chk.getText()), chk.isSelected());
                     }
                 });
                 p.add(chk);
@@ -232,8 +231,7 @@ public class SPDEditorGUI extends JFrame {
             panel.add(txtTicks);
             timingsPanel.add(panel);
 
-            nameTextFieldMap.put(name, 
-                                 new TextFieldPair(txtns, txtTicks));
+            nameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
         }
         panel = new JPanel();
         JButton btnSet = new JButton("Set");
@@ -243,8 +241,7 @@ public class SPDEditorGUI extends JFrame {
                 if (spd == null) 
                     showErrorMsg("Please open an SPD file.");
 
-                for (Map.Entry<String, TextFieldPair> entry : 
-                     nameTextFieldMap.entrySet()) {
+                for (Map.Entry<String, TextFieldPair> entry : nameTextFieldMap.entrySet()) {
                     JTextField txt = entry.getValue().right;
                     String name = entry.getKey(),
                            input = txt.getText();
@@ -306,8 +303,7 @@ public class SPDEditorGUI extends JFrame {
                 JFileChooser fc = new JFileChooser(Paths.get(".").toFile());
                 
                 if (e.getSource() == menuItemOpen) {
-                    if (fc.showOpenDialog(getContentPane()) == 
-                        JFileChooser.APPROVE_OPTION) {
+                    if (fc.showOpenDialog(getContentPane()) == JFileChooser.APPROVE_OPTION) {
                         File file = fc.getSelectedFile();
                         try {
                             spd = new SPDEditor(
@@ -355,8 +351,7 @@ public class SPDEditorGUI extends JFrame {
             LinkedHashMap<String, Boolean> voltages = spd.getVoltages();
             for (Map.Entry<String, Boolean> e : voltages.entrySet()) {
                 if (voltageCheckBoxMap.containsKey(e.getKey()))
-                    voltageCheckBoxMap.get(e.getKey())
-                                      .setSelected(e.getValue());
+                    voltageCheckBoxMap.get(e.getKey()).setSelected(e.getValue());
             }
 
             // update supported CLs
@@ -375,10 +370,7 @@ public class SPDEditorGUI extends JFrame {
             for (Map.Entry<String, Integer> e : spd.getTimings().entrySet()) {
                 if (nameTextFieldMap.containsKey(e.getKey())) {
                     TextFieldPair pair = nameTextFieldMap.get(e.getKey());
-                    pair.left.setText(
-                        String.format("%.3f", 
-                                      1000/spd.getFrequency()*e.getValue())
-                    );
+                    pair.left.setText(String.format("%.3f", 1000/spd.getFrequency()*e.getValue()));
                     pair.right.setText("" + e.getValue());
                 }
             }

@@ -33,6 +33,8 @@ public class SPDEditor {
     private byte tRPminCorrection;  // 0x25
     private byte tRCminCorrection;  // 0x26
 
+    private XMP xmp;                // 0xB0, can be null if no XMP
+
     public static void main(String[] args) {
         /*
         try {
@@ -56,8 +58,7 @@ public class SPDEditor {
 
     public SPDEditor(byte[] bytes) throws IllegalArgumentException {
         if (bytes.length < 128) {
-            throw new IllegalArgumentException("Expected 128 bytes. Got " + 
-                                               bytes.length + " bytes.");
+            throw new IllegalArgumentException("Expected 128 bytes. Got " + bytes.length + " bytes.");
         }
 
         this.bytes = Arrays.copyOf(bytes, bytes.length);
@@ -99,11 +100,17 @@ public class SPDEditor {
         tRCDminCorrection = bytes[0x24];
         tRPminCorrection = bytes[0x25];
         tRCminCorrection = bytes[0x26];
+
+        try {
+            xmp = new XMP(Arrays.copyOfRange(bytes, 0xB0, 0xB0 + XMP.SIZE));
+        }
+        catch (IllegalArgumentException e) {
+            xmp = null;
+            System.out.println("No XMP found.");
+        }
     }
 
-    public LinkedHashMap<String, Boolean> getVoltages() {
-        return voltages;
-    }
+    public LinkedHashMap<String, Boolean> getVoltages() { return voltages; }
 
     public boolean setVoltage(String voltage, boolean enabled) {
         if (!voltages.containsKey(voltage)) return false;
@@ -127,9 +134,7 @@ public class SPDEditor {
         tCKminCorrection = (byte)correction;
     }
 
-    public LinkedHashMap<Integer, Boolean> getSupportedCLs() {
-        return supportedCLs;
-    }
+    public LinkedHashMap<Integer, Boolean> getSupportedCLs() { return supportedCLs; }
 
     public boolean setSupportedCL(int cl, boolean supported) {
         if (!supportedCLs.containsKey(cl)) return false;
@@ -144,19 +149,15 @@ public class SPDEditor {
         double tCKns = tCKmin/8.0 + tCKminCorrection/1000.0;
         tCKns = getMorePrecisetCKns(tCKns);
 
-        double tCLns = Byte.toUnsignedInt(tCLmin)/8.0 + 
-                       tCLminCorrection/1000.0,
+        double tCLns = Byte.toUnsignedInt(tCLmin)/8.0 + tCLminCorrection/1000.0,
                tCL = Math.round(tCLns/tCKns),
-               tRCDns = Byte.toUnsignedInt(tRCDmin)/8.0 + 
-                        tRCDminCorrection/1000.0,
+               tRCDns = Byte.toUnsignedInt(tRCDmin)/8.0 + tRCDminCorrection/1000.0,
                tRCD = Math.round(tRCDns/tCKns),
-               tRPns = Byte.toUnsignedInt(tRPmin)/8.0 + 
-                       tRPminCorrection/1000.0,
+               tRPns = Byte.toUnsignedInt(tRPmin)/8.0 + tRPminCorrection/1000.0,
                tRP = Math.round(tRPns/tCKns),
                tRASns = Integer.toUnsignedLong(tRASmin)/8.0,
                tRAS = Math.round(tRASns/tCKns),
-               tRCns = Integer.toUnsignedLong(tRCmin)/8.0 + 
-                       tRCminCorrection/1000.0,
+               tRCns = Integer.toUnsignedLong(tRCmin)/8.0 + tRCminCorrection/1000.0,
                tRC = Math.round(tRCns/tCKns),
                tRFCns = Integer.toUnsignedLong(tRFCmin)/8.0,
                tRFC = Math.round(tRFCns/tCKns),
@@ -340,5 +341,9 @@ public class SPDEditor {
         bytes[0x24] = tRCDminCorrection;
         bytes[0x25] = tRPminCorrection;
         bytes[0x26] = tRCminCorrection;
+
+        if (xmp != null) {
+            System.arraycopy(xmp.getBytes(), 0, bytes, 0xB0, XMP.SIZE);
+        }
     }
 }
