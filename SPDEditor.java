@@ -46,7 +46,7 @@ public class SPDEditor {
             spd.setTiming("tRCD", 10);
             spd.setTiming("tRP", 10);
             spd.setTiming("tRAS", 30);
-            spd.setSupportedCL(11, false);
+            spd.setCLSupported(11, false);
             spd.save("test.bin");
         }
         catch (Exception e) {
@@ -138,7 +138,7 @@ public class SPDEditor {
 
     public LinkedHashMap<Integer, Boolean> getSupportedCLs() { return supportedCLs; }
 
-    public boolean setSupportedCL(int cl, boolean supported) {
+    public boolean setCLSupported(int cl, boolean supported) {
         if (!supportedCLs.containsKey(cl)) return false;
 
         supportedCLs.put(cl, supported);
@@ -344,8 +344,7 @@ public class SPDEditor {
         bytes[0x25] = tRPminCorrection;
         bytes[0x26] = tRCminCorrection;
 
-        if (xmp != null) {
+        if (xmp != null)
             System.arraycopy(xmp.getBytes(), 0, bytes, 0xB0, XMP.SIZE);
-        }
     }
 }

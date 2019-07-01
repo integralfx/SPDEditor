@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -13,6 +14,7 @@ import javax.swing.*;
 import javax.swing.border.Border;
 
 public class SPDEditorGUI extends JFrame {
+    private JButton btnXMPset;
     private JComboBox<Integer> cboXMPNum;
     private JLabel lblSPDFile, lblXMP;
     private JRadioButton rdoTime, rdoCycles, rdoXMPTime, rdoXMPCycles;
@@ -23,6 +25,7 @@ public class SPDEditorGUI extends JFrame {
     private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap, XMPclCheckBoxMap;
     private LinkedHashMap<String, JCheckBox> voltageCheckBoxMap;
     private SPDEditor spd;
+    private XMP xmp;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new SPDEditorGUI());
@@ -73,8 +76,10 @@ public class SPDEditorGUI extends JFrame {
         txtFrequency.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (spd == null)
+                if (spd == null) {
                     showErrorMsg("Please open an SPD file.");
+                    return;
+                }
 
                 boolean valid = true;
                 String s = txtFrequency.getText();
@@ -136,10 +141,8 @@ public class SPDEditorGUI extends JFrame {
             chk.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (spd == null)
-                        showErrorMsg("Please open an SPD file.");
-
-                    spd.setVoltage(v, chk.isSelected());
+                    if (spd == null) showErrorMsg("Please open an SPD file.");
+                    else spd.setVoltage(v, chk.isSelected());
                 }
             });
             panel.add(chk);
@@ -163,7 +166,7 @@ public class SPDEditorGUI extends JFrame {
                         if (spd == null)
                             showErrorMsg("Please open an SPD file.");
                         else
-                            spd.setSupportedCL(Integer.valueOf(chk.getText()), chk.isSelected());
+                            spd.setCLSupported(Integer.valueOf(chk.getText()), chk.isSelected());
                     }
                 });
                 p.add(chk);
@@ -210,7 +213,7 @@ public class SPDEditorGUI extends JFrame {
                                 spd.setTiming(name, t);
                                 if (clCheckBoxMap.containsKey(t)) {
                                     clCheckBoxMap.get(t).setSelected(true);
-                                    spd.setSupportedCL(t, true);
+                                    spd.setCLSupported(t, true);
                                 }
                             }
                         }
@@ -255,7 +258,7 @@ public class SPDEditorGUI extends JFrame {
                                 spd.setTiming(name, t);
                                 if (clCheckBoxMap.containsKey(t)) {
                                     clCheckBoxMap.get(t).setSelected(true);
-                                    spd.setSupportedCL(t, true);
+                                    spd.setCLSupported(t, true);
                                 }
                             }
                         }
@@ -290,11 +293,10 @@ public class SPDEditorGUI extends JFrame {
         lblXMP = new JLabel("No XMP");
         panel.add(lblXMP);
         cboXMPNum = new JComboBox<>(new Integer[]{ 0, 1 });
-        // TODO
         cboXMPNum.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                updateXMPTab();
             }
         });
         panel.add(cboXMPNum);
@@ -306,11 +308,18 @@ public class SPDEditorGUI extends JFrame {
         txtXMPFrequencyns.setEditable(false);
         panel.add(txtXMPFrequencyns);
         txtXMPFrequency = new JTextField(5);
-        // TODO
+        // TODO: Let user choose MTB and tCKmin
         txtXMPFrequency.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
+                if (spd == null) {
+                    showErrorMsg("Please open an SPD file.");
+                    return;
+                }
+                else if (spd.getXMP() == null) {
+                    showErrorMsg("No XMP found.");
+                    return;
+                }
             }
         });
         panel.add(txtXMPFrequency);
@@ -331,7 +340,10 @@ public class SPDEditorGUI extends JFrame {
 
         panel = new JPanel();
         panel.add(new JLabel("Voltage:"));
-        SpinnerNumberModel model = new SpinnerNumberModel(1.20, 1.20, 2.00, 0.05);
+        ArrayList<String> voltages = new ArrayList<>();
+        for (int i = 120; i <= 200; i += 5)
+            voltages.add(String.format("%.2f", i / 100.0));
+        SpinnerListModel model = new SpinnerListModel(voltages.toArray(new String[0]));
         spnXMPVoltage = new JSpinner(model);
         ((JSpinner.DefaultEditor)spnXMPVoltage.getEditor()).getTextField().setEditable(false);
         panel.add(spnXMPVoltage);
@@ -355,7 +367,10 @@ public class SPDEditorGUI extends JFrame {
                         else if (spd.getXMP() == null)
                             showErrorMsg("No XMPs found.");
                         else {
-                            // TODO: enable CL in selected XMP
+                            int num = (Integer)cboXMPNum.getSelectedItem();
+                            XMP.Profile selected = spd.getXMP().getProfiles()[num];
+                            if (selected != null)
+                                selected.setCLSupported(Integer.valueOf(chk.getText()), chk.isSelected());
                         }
                     }
                 });
@@ -396,22 +411,26 @@ public class SPDEditorGUI extends JFrame {
                     else {
                         boolean valid = true;
                         String s = txtTicks.getText();
+                        int num = (Integer)cboXMPNum.getSelectedItem();
+                        XMP.Profile selected = spd.getXMP().getProfiles()[num];
+
+                        if (selected == null) return;
                         try {
                             int t = Integer.valueOf(s);
                             if (t < 0) valid = false;
                             else if (name.equals("tCL")) {
                                 if (t < 4 || t > 18) valid = false;
                                 else {
-                                    //spd.setTiming(name, t);
+                                    selected.setTiming(name, t);
                                     if (XMPclCheckBoxMap.containsKey(t)) {
                                         XMPclCheckBoxMap.get(t).setSelected(true);
-                                        // TODO: enable CL in selected XMP
+                                        selected.setCLSupported(t, true);
                                     }
                                 }
                             }
-                            //else spd.setTiming(name, t);
+                            else selected.setTiming(name, t);
 
-                            //updateSPDTimingsText();
+                            updateXMPTimingsText();
                         }
                         catch (NumberFormatException ex) {
                             valid = false;
@@ -430,8 +449,8 @@ public class SPDEditorGUI extends JFrame {
             XMPnameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
         }
         panel = new JPanel();
-        JButton btnSet = new JButton("Set");
-        btnSet.addActionListener(new ActionListener() {
+        btnXMPset = new JButton("Set");
+        btnXMPset.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (spd == null)
@@ -444,22 +463,25 @@ public class SPDEditorGUI extends JFrame {
                         String name = entry.getKey(),
                                 input = txt.getText();
                         boolean valid = true;
+                        int num = (Integer)cboXMPNum.getSelectedItem();
+                        XMP.Profile selected = spd.getXMP().getProfiles()[num];
+
                         try {
                             int t = Integer.valueOf(input);
                             if (t < 0) valid = false;
                             else if (name.equals("tCL")) {
                                 if (t < 4 || t > 18) valid = false;
                                 else {
-                                    //spd.setTiming(name, t);
+                                    selected.setTiming(name, t);
                                     if (XMPclCheckBoxMap.containsKey(t)) {
                                         XMPclCheckBoxMap.get(t).setSelected(true);
-                                        // TODO: set timing in selected XMP
+                                        selected.setCLSupported(t, true);
                                     }
                                 }
                             }
-                            //else spd.setTiming(name, t);
+                            else selected.setTiming(name, t);
 
-                            //updateSPDTimingsText();
+                            updateXMPTimingsText();
                         }
                         catch (NumberFormatException ex) {
                             valid = false;
@@ -473,7 +495,7 @@ public class SPDEditorGUI extends JFrame {
                 }
             }
         });
-        panel.add(btnSet);
+        panel.add(btnXMPset);
         timingsPanel.add(panel);
         timingsPanel.setBorder(BorderFactory.createTitledBorder(b, "Timings"));
         panelXMP.add(timingsPanel);
@@ -502,6 +524,7 @@ public class SPDEditorGUI extends JFrame {
                         File file = fc.getSelectedFile();
                         try {
                             spd = new SPDEditor(Files.readAllBytes(file.toPath()));
+                            xmp = spd.getXMP();
 
                             lblSPDFile.setText(file.getName());
                             updateSPDTab();
@@ -509,6 +532,7 @@ public class SPDEditorGUI extends JFrame {
                         }
                         catch (Exception ex) {
                             spd = null;
+                            xmp = null;
                             showErrorMsg("Failed to read " + file.getName());
                             ex.printStackTrace();
                         }
@@ -520,11 +544,28 @@ public class SPDEditorGUI extends JFrame {
                         return;
                     }
 
-                    if (fc.showSaveDialog(getContentPane()) == 
-                        JFileChooser.APPROVE_OPTION) {
-                        String path = fc.getSelectedFile().getAbsolutePath();
-                        if (spd.save(path))
-                            showSuccessMsg("Successfully saved to " + path);
+                    if (fc.showSaveDialog(getContentPane()) == JFileChooser.APPROVE_OPTION) {
+                        File file = fc.getSelectedFile();
+
+                        if (file.exists()) {
+                            int option = JOptionPane.showConfirmDialog(
+                                SPDEditorGUI.this,
+                                "Are you sure you want to overwrite " + file.getName() + "?",
+                                "Overwrite",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE
+                            );
+
+                            switch (option) {
+                                case JOptionPane.CANCEL_OPTION:
+                                case JOptionPane.CLOSED_OPTION:
+                                case JOptionPane.NO_OPTION:
+                                    return;
+                            }
+                        }
+
+                        if (spd.save(file.getAbsolutePath()))
+                            showSuccessMsg("Successfully saved to " + file.getAbsolutePath());
                         else showErrorMsg("Failed to save SPD file");
                     }
                 }
@@ -577,7 +618,6 @@ public class SPDEditorGUI extends JFrame {
         if (spd == null) return;
 
         SwingUtilities.invokeLater(() -> {
-            XMP xmp = spd.getXMP();
             if (xmp != null) {
                 XMP.Profile[] profiles = xmp.getProfiles();
                 lblXMP.setText("Found " + (profiles[1] != null ? "2 profiles." : "1 profile."));
@@ -585,12 +625,14 @@ public class SPDEditorGUI extends JFrame {
                 int num = (Integer)cboXMPNum.getSelectedItem();
                 XMP.Profile selected = profiles[num];
                 if (selected != null) {
+                    setXMPControlsEnabled(true);
+
                     double frequency = selected.getFrequency();
                     txtXMPFrequencyns.setText(String.format("%.3f", 1000 / frequency));
                     txtXMPFrequency.setText(String.format("%.2f", frequency));
 
                     double voltage = selected.getVoltage() / 100.0;
-                    spnXMPVoltage.setValue(voltage);
+                    spnXMPVoltage.setValue(String.format("%.2f", voltage));
 
                     LinkedHashMap<Integer, Boolean> cls = selected.getSupportedCLs();
                     for (Map.Entry<Integer, Boolean> e : cls.entrySet()) {
@@ -600,8 +642,35 @@ public class SPDEditorGUI extends JFrame {
 
                     updateXMPTimingsText();
                 }
-                else lblXMP.setText("There is no profile #" + num + ".");
+                else {
+                    lblXMP.setText("There is no profile #" + num + ".");
+                    setXMPControlsEnabled(false);
+                }
             }
+            else {
+                lblXMP.setText("No XMP found.");
+                setXMPControlsEnabled(false);
+            }
+        });
+    }
+
+    private void setXMPControlsEnabled(boolean enable) {
+        SwingUtilities.invokeLater(() -> {
+            txtXMPFrequencyns.setEnabled(enable);
+            txtXMPFrequency.setEnabled(enable);
+            rdoXMPTime.setEnabled(enable);
+            rdoXMPCycles.setEnabled(enable);
+            spnXMPVoltage.setEnabled(enable);
+
+            for (Map.Entry<Integer, JCheckBox> e : XMPclCheckBoxMap.entrySet())
+                e.getValue().setEnabled(enable);
+
+            for (Map.Entry<String, TextFieldPair> e : XMPnameTextFieldMap.entrySet()) {
+                e.getValue().left.setEnabled(enable);
+                e.getValue().right.setEnabled(enable);
+            }
+
+            btnXMPset.setEnabled(enable);
         });
     }
 
@@ -609,7 +678,6 @@ public class SPDEditorGUI extends JFrame {
         if (spd == null) return;
 
         SwingUtilities.invokeLater(() -> {
-            XMP xmp = spd.getXMP();
             if (xmp == null) return;
 
             int num = (Integer)cboXMPNum.getSelectedItem();

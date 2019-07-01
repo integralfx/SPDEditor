@@ -15,8 +15,7 @@ public class XMP {
 
     public XMP(byte[] bytes) throws IllegalArgumentException {
         if (bytes.length < SIZE) {
-            String msg = String.format("Expected %d bytes. Got %d bytes.",
-                                       SIZE, bytes.length);
+            String msg = String.format("Expected %d bytes. Got %d bytes.", SIZE, bytes.length);
             throw new IllegalArgumentException(msg);
         }
 
@@ -41,8 +40,7 @@ public class XMP {
             profile = new Profile[2];
 
             if (profileEnabled[0]) {
-                byte[] b = Arrays.copyOfRange(bytes, PROFILE1_OFFSET, 
-                                              PROFILE2_OFFSET);
+                byte[] b = Arrays.copyOfRange(bytes, PROFILE1_OFFSET, PROFILE2_OFFSET);
                 profile[0] = new Profile(b, new MTB(bytes[4], bytes[5]));
             }
 
@@ -71,8 +69,8 @@ public class XMP {
         if (profileEnabled[0]) bytes[2] = (byte)1;
         if (profileEnabled[1]) bytes[2] |= (byte)(1 << 1);
 
-        bytes[2] = (byte)((dimmsPerChannel[0] & 0x3) << 2 |
-                          (dimmsPerChannel[1] & 0x3) << 4);
+        bytes[2] |= (byte)((dimmsPerChannel[0] & 0x3) << 2 |
+                           (dimmsPerChannel[1] & 0x3) << 4);
 
         bytes[3] = version;
 
@@ -206,7 +204,7 @@ public class XMP {
             return supportedCLs;
         }
 
-        public boolean setSupportedCL(int cl, boolean supported) {
+        public boolean setCLSupported(int cl, boolean supported) {
             if (!supportedCLs.containsKey(cl)) return false;
     
             supportedCLs.put(cl, supported);
@@ -328,8 +326,8 @@ public class XMP {
             if (v.charAt(v.length() - 1) == '5')
                 bytes[0] = (byte)1;
             else bytes[0] = 0;
-            bytes[0] |= (voltage % 10) << 1;
-            bytes[0] |= ((voltage % 100) & 0x3) << 5;
+            bytes[0] |= (voltage / 10 % 10) << 1;
+            bytes[0] |= ((voltage / 100 % 100) & 0x3) << 5;
 
             bytes[1] = tCKmin;
             bytes[2] = tCLmin;
