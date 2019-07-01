@@ -13,7 +13,7 @@ import javax.swing.*;
 import javax.swing.border.Border;
 
 public class SPDEditorGUI extends JFrame {
-    private JComboBox<Integer> cboXMPNo;
+    private JComboBox<Integer> cboXMPNum;
     private JLabel lblSPDFile, lblXMP;
     private JRadioButton rdoTime, rdoCycles, rdoXMPTime, rdoXMPCycles;
     private JSpinner spnXMPVoltage;
@@ -99,7 +99,7 @@ public class SPDEditorGUI extends JFrame {
                             spd.setFrequency(f);
                         }
 
-                        updateTimingsText();
+                        updateSPDTimingsText();
                     }
                 }
                 catch (NumberFormatException ex) {
@@ -181,7 +181,7 @@ public class SPDEditorGUI extends JFrame {
                 "tCL", "tRCD", "tRP", "tRAS", "tRC","tRFC",
                 "tRRD", "tFAW", "tWR", "tWTR", "tRTP"
         };
-        XMPnameTextFieldMap = new LinkedHashMap<>();
+        nameTextFieldMap = new LinkedHashMap<>();
         for (String name : timingNames) {
             panel = new JPanel();
 
@@ -216,7 +216,7 @@ public class SPDEditorGUI extends JFrame {
                         }
                         else spd.setTiming(name, t);
 
-                        updateTimingsText();
+                        updateSPDTimingsText();
                     }
                     catch (NumberFormatException ex) {
                         valid = false;
@@ -231,7 +231,7 @@ public class SPDEditorGUI extends JFrame {
             panel.add(txtTicks);
             timingsPanel.add(panel);
 
-            XMPnameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
+            nameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
         }
         panel = new JPanel();
         JButton btnSet = new JButton("Set");
@@ -261,7 +261,7 @@ public class SPDEditorGUI extends JFrame {
                         }
                         else spd.setTiming(name, t);
 
-                        updateTimingsText();
+                        updateSPDTimingsText();
                     }
                     catch (NumberFormatException ex) {
                         valid = false;
@@ -289,15 +289,15 @@ public class SPDEditorGUI extends JFrame {
         JPanel panel = new JPanel();
         lblXMP = new JLabel("No XMP");
         panel.add(lblXMP);
-        cboXMPNo = new JComboBox<>(new Integer[]{ 0, 1 });
+        cboXMPNum = new JComboBox<>(new Integer[]{ 0, 1 });
         // TODO
-        cboXMPNo.addActionListener(new ActionListener() {
+        cboXMPNum.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
 
             }
         });
-        panel.add(cboXMPNo);
+        panel.add(cboXMPNum);
         panelXMP.add(panel);
 
         panel = new JPanel();
@@ -411,7 +411,7 @@ public class SPDEditorGUI extends JFrame {
                             }
                             //else spd.setTiming(name, t);
 
-                            //updateTimingsText();
+                            //updateSPDTimingsText();
                         }
                         catch (NumberFormatException ex) {
                             valid = false;
@@ -459,7 +459,7 @@ public class SPDEditorGUI extends JFrame {
                             }
                             //else spd.setTiming(name, t);
 
-                            //updateTimingsText();
+                            //updateSPDTimingsText();
                         }
                         catch (NumberFormatException ex) {
                             valid = false;
@@ -501,12 +501,11 @@ public class SPDEditorGUI extends JFrame {
                     if (fc.showOpenDialog(getContentPane()) == JFileChooser.APPROVE_OPTION) {
                         File file = fc.getSelectedFile();
                         try {
-                            spd = new SPDEditor(
-                                Files.readAllBytes(file.toPath())
-                            );
+                            spd = new SPDEditor(Files.readAllBytes(file.toPath()));
 
                             lblSPDFile.setText(file.getName());
-                            updateGUI();
+                            updateSPDTab();
+                            updateXMPTab();
                         }
                         catch (Exception ex) {
                             spd = null;
@@ -537,7 +536,9 @@ public class SPDEditorGUI extends JFrame {
         setJMenuBar(menuBar);
     }
 
-    private void updateGUI() {
+    private void updateSPDTab() {
+        if (spd == null) return;
+
         SwingUtilities.invokeLater(() -> {
             double f = spd.getFrequency();
             txtFrequencyns.setText(String.format("%.3f", 1000/f));
@@ -556,17 +557,71 @@ public class SPDEditorGUI extends JFrame {
                     clCheckBoxMap.get(e.getKey()).setSelected(e.getValue());
             }
     
-            updateTimingsText();
+            updateSPDTimingsText();
         });
     }
 
-    private void updateTimingsText() {
+    private void updateSPDTimingsText() {
         SwingUtilities.invokeLater(() -> {
             for (Map.Entry<String, Integer> e : spd.getTimings().entrySet()) {
                 if (nameTextFieldMap.containsKey(e.getKey())) {
                     TextFieldPair pair = nameTextFieldMap.get(e.getKey());
                     pair.left.setText(String.format("%.3f", 1000/spd.getFrequency()*e.getValue()));
-                    pair.right.setText("" + e.getValue());
+                    pair.right.setText(e.getValue().toString());
+                }
+            }
+        });
+    }
+
+    private void updateXMPTab() {
+        if (spd == null) return;
+
+        SwingUtilities.invokeLater(() -> {
+            XMP xmp = spd.getXMP();
+            if (xmp != null) {
+                XMP.Profile[] profiles = xmp.getProfiles();
+                lblXMP.setText("Found " + (profiles[1] != null ? "2 profiles." : "1 profile."));
+
+                int num = (Integer)cboXMPNum.getSelectedItem();
+                XMP.Profile selected = profiles[num];
+                if (selected != null) {
+                    double frequency = selected.getFrequency();
+                    txtXMPFrequencyns.setText(String.format("%.3f", 1000 / frequency));
+                    txtXMPFrequency.setText(String.format("%.2f", frequency));
+
+                    double voltage = selected.getVoltage() / 100.0;
+                    spnXMPVoltage.setValue(voltage);
+
+                    LinkedHashMap<Integer, Boolean> cls = selected.getSupportedCLs();
+                    for (Map.Entry<Integer, Boolean> e : cls.entrySet()) {
+                        if (XMPclCheckBoxMap.containsKey(e.getKey()))
+                            XMPclCheckBoxMap.get(e.getKey()).setSelected(e.getValue());
+                    }
+
+                    updateXMPTimingsText();
+                }
+                else lblXMP.setText("There is no profile #" + num + ".");
+            }
+        });
+    }
+
+    private void updateXMPTimingsText() {
+        if (spd == null) return;
+
+        SwingUtilities.invokeLater(() -> {
+            XMP xmp = spd.getXMP();
+            if (xmp == null) return;
+
+            int num = (Integer)cboXMPNum.getSelectedItem();
+            XMP.Profile selected = xmp.getProfiles()[num];
+            if (selected == null) return;
+
+            for (Map.Entry<String, Integer> e : selected.getTimings().entrySet()) {
+                if (XMPnameTextFieldMap.containsKey(e.getKey())) {
+                    TextFieldPair pair = XMPnameTextFieldMap.get(e.getKey());
+                    double time = 1000 / selected.getFrequency() * e.getValue();
+                    pair.left.setText(String.format("%.3f", time));
+                    pair.right.setText(e.getValue().toString());
                 }
             }
         });

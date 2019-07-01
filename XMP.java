@@ -159,19 +159,29 @@ public class XMP {
             }
             for (int i = 12; i <= 18; i++) {
                 int index = i - 12;
-                supportedCLs.put(i, ((bytes[3] >> index) & 0x1) == 0x1);
+                supportedCLs.put(i, ((bytes[4] >> index) & 0x1) == 0x1);
             }
             tCWLmin = bytes[5];
             tRPmin = bytes[6];
             tRCDmin = bytes[7];
             tWRmin = bytes[8];
-            tRASmin = (short)(((bytes[9] & 0xF) << 8) | bytes[10]);
-            tRCmin = (short)(((bytes[9] >> 4 & 0xF) << 8) | bytes[11]);
-            tREFImax = (short)((bytes[13] << 8) | bytes[12]);
-            tRFCmin = (short)((bytes[15] << 8) | bytes[14]);
+            int upper = Byte.toUnsignedInt(bytes[9]) & 0xF,
+                lower = Byte.toUnsignedInt(bytes[10]) & 0xFF;
+            tRASmin = (short)(upper << 8 | lower);
+            upper = Byte.toUnsignedInt(bytes[9]) >> 4 & 0xF;
+            lower = Byte.toUnsignedInt(bytes[11]);
+            tRCmin = (short)(upper << 8 | lower);
+            upper = Byte.toUnsignedInt(bytes[13]) & 0xFF;
+            lower = Byte.toUnsignedInt(bytes[12]) & 0xFF;
+            tREFImax = (short)(upper << 8 | lower);
+            upper = Byte.toUnsignedInt(bytes[15]);
+            lower = Byte.toUnsignedInt(bytes[14]);
+            tRFCmin = (short)(upper << 8 | lower);
             tRTPmin = bytes[16];
             tRRDmin = bytes[17];
-            tFAWmin = (short)(((bytes[18] & 0xF) << 8) | bytes[19]);
+            upper = Byte.toUnsignedInt(bytes[18]) & 0xF;
+            lower = Byte.toUnsignedInt(bytes[19]) & 0xFF;
+            tFAWmin = (short)(upper << 8 | lower);
             tWTRmin = bytes[20];
         }
 
