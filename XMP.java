@@ -194,6 +194,10 @@ public class XMP {
 
         public void setVoltage(int v) { voltage = v; }
 
+        public byte gettCKmin() { return tCKmin; }
+
+        public void settCKmin(byte b) { tCKmin = b; }
+
         public double getFrequency() {
             double mtbns = 1.0 * Byte.toUnsignedInt(mtb.dividend) / 
                                  Byte.toUnsignedInt(mtb.divisor);

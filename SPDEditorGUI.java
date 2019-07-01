@@ -20,7 +20,8 @@ public class SPDEditorGUI extends JFrame {
     private JRadioButton rdoTime, rdoCycles, rdoXMPTime, rdoXMPCycles;
     private JSpinner spnXMPVoltage;
     private JTabbedPane tabbedPane;
-    private JTextField txtFrequencyns, txtFrequency, txtXMPFrequencyns, txtXMPFrequency;
+    private JTextField txtFrequencyns, txtFrequency, txtXMPmtbDividend, txtXMPmtbDivisor, txtXMPmtbns,
+                       txtXMPFrequencyValue, txtXMPFrequencyns, txtXMPFrequency;
     private LinkedHashMap<String, TextFieldPair> nameTextFieldMap, XMPnameTextFieldMap;
     private LinkedHashMap<Integer, JCheckBox> clCheckBoxMap, XMPclCheckBoxMap;
     private LinkedHashMap<String, JCheckBox> voltageCheckBoxMap;
@@ -57,6 +58,7 @@ public class SPDEditorGUI extends JFrame {
         panel.add(lblSPDFile);
         panelSPD.add(panel);
 
+        // TODO: Only allow the user to select certain frequencies
         Frequency[] frequencies = {
                 new Frequency(1200/3.0), // 400
                 new Frequency(1600/3.0), // 533.33...
@@ -69,9 +71,6 @@ public class SPDEditorGUI extends JFrame {
         panel.add(new JLabel("Frequency:"));
         //JComboBox<Frequency> cboFrequencies = new JComboBox<>(frequencies);
         //panel.add(cboFrequencies);
-        txtFrequencyns = new JTextField(5);
-        txtFrequencyns.setEditable(false);
-        panel.add(txtFrequencyns);
         txtFrequency = new JTextField(5);
         txtFrequency.addActionListener(new ActionListener() {
             @Override
@@ -118,19 +117,22 @@ public class SPDEditorGUI extends JFrame {
             }
         });
         panel.add(txtFrequency);
+        txtFrequencyns = new JTextField(5);
+        txtFrequencyns.setEditable(false);
+        panel.add(txtFrequencyns);
         panelSPD.add(panel);
 
         panel = new JPanel();
+        rdoCycles = new JRadioButton("Scale from cycles (ticks)");
+        rdoCycles.setToolTipText("Keeps the same amount of cycles in ticks when changing frequency.");
+        panel.add(rdoCycles);
         rdoTime = new JRadioButton("Scale from time (ns)");
         rdoTime.setToolTipText("Keeps the same absolute time in ns when changing frequency.");
         rdoTime.setSelected(true);
         panel.add(rdoTime);
-        rdoCycles = new JRadioButton("Scale from cycles (ticks)");
-        rdoCycles.setToolTipText("Keeps the same amount of cycles in ticks when changing frequency.");
-        panel.add(rdoCycles);
         ButtonGroup group = new ButtonGroup();
-        group.add(rdoTime);
         group.add(rdoCycles);
+        group.add(rdoTime);
         panelSPD.add(panel);
 
         panel = new JPanel();
@@ -192,9 +194,6 @@ public class SPDEditorGUI extends JFrame {
             lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
             panel.add(lbl);
 
-            JTextField txtns = new JTextField(5);
-            txtns.setEditable(false);
-            panel.add(txtns);
             JTextField txtTicks = new JTextField(3);
             txtTicks.addActionListener(new ActionListener() {
                 @Override
@@ -232,9 +231,12 @@ public class SPDEditorGUI extends JFrame {
                 }
             });
             panel.add(txtTicks);
+            JTextField txtns = new JTextField(5);
+            txtns.setEditable(false);
+            panel.add(txtns);
             timingsPanel.add(panel);
 
-            nameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
+            nameTextFieldMap.put(name, new TextFieldPair(txtTicks, txtns));
         }
         panel = new JPanel();
         JButton btnSet = new JButton("Set");
@@ -245,7 +247,7 @@ public class SPDEditorGUI extends JFrame {
                     showErrorMsg("Please open an SPD file.");
 
                 for (Map.Entry<String, TextFieldPair> entry : nameTextFieldMap.entrySet()) {
-                    JTextField txt = entry.getValue().right;
+                    JTextField txt = entry.getValue().left;
                     String name = entry.getKey(),
                             input = txt.getText();
                     boolean valid = true;
@@ -303,26 +305,64 @@ public class SPDEditorGUI extends JFrame {
         panelXMP.add(panel);
 
         panel = new JPanel();
-        panel.add(new JLabel("Frequency:"));
-        txtXMPFrequencyns = new JTextField(5);
-        txtXMPFrequencyns.setEditable(false);
-        panel.add(txtXMPFrequencyns);
-        txtXMPFrequency = new JTextField(5);
-        // TODO: Let user choose MTB and tCKmin
-        txtXMPFrequency.addActionListener(new ActionListener() {
+        panel.add(new JLabel("MTB:"));
+        txtXMPmtbDividend = new JTextField(2);
+        panel.add(txtXMPmtbDividend);
+        txtXMPmtbDivisor = new JTextField(2);
+        panel.add(txtXMPmtbDivisor);
+        txtXMPmtbns = new JTextField(5);
+        txtXMPmtbns.setEditable(false);
+        panel.add(txtXMPmtbns);
+        panelXMP.add(panel);
+        ActionListener l = new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (spd == null) {
+                if (spd == null)
                     showErrorMsg("Please open an SPD file.");
-                    return;
-                }
-                else if (spd.getXMP() == null) {
+                else if (xmp == null)
                     showErrorMsg("No XMP found.");
-                    return;
+                else {
+                    int dividend = Integer.valueOf(txtXMPmtbDividend.getText()),
+                        divisor = Integer.valueOf(txtXMPmtbDivisor.getText());
+                    XMP.Profile selected = xmp.getProfiles()[cboXMPNum.getSelectedIndex()];
+                    selected.setMTB((byte)dividend, (byte)divisor);
+
+                    txtXMPmtbns.setText(String.format("%.3f ns", selected.getMTB().getTime()));
+
+                    updateXMPFrequencyText();
+
+                    updateXMPTimingsText();
+                }
+
+            }
+        };
+        txtXMPmtbDividend.addActionListener(l);
+        txtXMPmtbDivisor.addActionListener(l);
+
+        panel = new JPanel();
+        panel.add(new JLabel("Frequency:"));
+        txtXMPFrequencyValue = new JTextField(2);
+        txtXMPFrequencyValue.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (spd == null)
+                    showErrorMsg("Please open an SPD file.");
+                else if (xmp == null)
+                    showErrorMsg("No XMP found.");
+                else {
+                    updateXMPFrequencyText();
+
+                    updateXMPTimingsText();
                 }
             }
         });
+        panel.add(txtXMPFrequencyValue);
+        txtXMPFrequency = new JTextField(7);
+        txtXMPFrequency.setEditable(false);
         panel.add(txtXMPFrequency);
+        txtXMPFrequencyns = new JTextField(5);
+        txtXMPFrequencyns.setEditable(false);
+        panel.add(txtXMPFrequencyns);
         panelXMP.add(panel);
 
         panel = new JPanel();
@@ -397,9 +437,6 @@ public class SPDEditorGUI extends JFrame {
             lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
             panel.add(lbl);
 
-            JTextField txtns = new JTextField(5);
-            txtns.setEditable(false);
-            panel.add(txtns);
             JTextField txtTicks = new JTextField(3);
             txtTicks.addActionListener(new ActionListener() {
                 @Override
@@ -444,9 +481,12 @@ public class SPDEditorGUI extends JFrame {
                 }
             });
             panel.add(txtTicks);
+            JTextField txtns = new JTextField(6);
+            txtns.setEditable(false);
+            panel.add(txtns);
             timingsPanel.add(panel);
 
-            XMPnameTextFieldMap.put(name, new TextFieldPair(txtns, txtTicks));
+            XMPnameTextFieldMap.put(name, new TextFieldPair(txtTicks, txtns));
         }
         panel = new JPanel();
         btnXMPset = new JButton("Set");
@@ -459,7 +499,7 @@ public class SPDEditorGUI extends JFrame {
                     showErrorMsg("No XMPs found.");
                 else {
                     for (Map.Entry<String, TextFieldPair> entry : XMPnameTextFieldMap.entrySet()) {
-                        JTextField txt = entry.getValue().right;
+                        JTextField txt = entry.getValue().left;
                         String name = entry.getKey(),
                                 input = txt.getText();
                         boolean valid = true;
@@ -607,8 +647,8 @@ public class SPDEditorGUI extends JFrame {
             for (Map.Entry<String, Integer> e : spd.getTimings().entrySet()) {
                 if (nameTextFieldMap.containsKey(e.getKey())) {
                     TextFieldPair pair = nameTextFieldMap.get(e.getKey());
-                    pair.left.setText(String.format("%.3f", 1000/spd.getFrequency()*e.getValue()));
-                    pair.right.setText(e.getValue().toString());
+                    pair.left.setText(e.getValue().toString());
+                    pair.right.setText(String.format("%.3f", 1000/spd.getFrequency()*e.getValue()));
                 }
             }
         });
@@ -627,9 +667,15 @@ public class SPDEditorGUI extends JFrame {
                 if (selected != null) {
                     setXMPControlsEnabled(true);
 
+                    XMP.MTB mtb = selected.getMTB();
+                    txtXMPmtbDividend.setText(String.valueOf(mtb.dividend));
+                    txtXMPmtbDivisor.setText(String.valueOf(mtb.divisor));
+                    txtXMPmtbns.setText(String.format("%.3f ns", mtb.getTime()));
+
                     double frequency = selected.getFrequency();
-                    txtXMPFrequencyns.setText(String.format("%.3f", 1000 / frequency));
-                    txtXMPFrequency.setText(String.format("%.2f", frequency));
+                    txtXMPFrequencyValue.setText(String.valueOf(Byte.toUnsignedInt(selected.gettCKmin())));
+                    txtXMPFrequency.setText(String.format("%.2f MHz", frequency));
+                    txtXMPFrequencyns.setText(String.format("%.3f ns", 1000 / frequency));
 
                     double voltage = selected.getVoltage() / 100.0;
                     spnXMPVoltage.setValue(String.format("%.2f", voltage));
@@ -674,12 +720,25 @@ public class SPDEditorGUI extends JFrame {
         });
     }
 
-    private void updateXMPTimingsText() {
-        if (spd == null) return;
+    private void updateXMPFrequencyText() {
+        if (spd == null || xmp == null) return;
 
         SwingUtilities.invokeLater(() -> {
-            if (xmp == null) return;
+            int input = Integer.valueOf(txtXMPFrequencyValue.getText()),
+                num = cboXMPNum.getSelectedIndex();
+            XMP.Profile selected = xmp.getProfiles()[num];
+            selected.settCKmin((byte)input);
 
+            double freqns = input * selected.getMTB().getTime();
+            txtXMPFrequency.setText(String.format("%.2f MHz", 1000 / freqns));
+            txtXMPFrequencyns.setText(String.format("%.3f ns", freqns));
+        });
+    }
+
+    private void updateXMPTimingsText() {
+        if (spd == null || xmp == null) return;
+
+        SwingUtilities.invokeLater(() -> {
             int num = (Integer)cboXMPNum.getSelectedItem();
             XMP.Profile selected = xmp.getProfiles()[num];
             if (selected == null) return;
@@ -688,8 +747,8 @@ public class SPDEditorGUI extends JFrame {
                 if (XMPnameTextFieldMap.containsKey(e.getKey())) {
                     TextFieldPair pair = XMPnameTextFieldMap.get(e.getKey());
                     double time = 1000 / selected.getFrequency() * e.getValue();
-                    pair.left.setText(String.format("%.3f", time));
-                    pair.right.setText(e.getValue().toString());
+                    pair.left.setText(e.getValue().toString());
+                    pair.right.setText(String.format("%.3f ns", time));
                 }
             }
         });
