@@ -320,13 +320,6 @@ public class SPDEditorGUI extends JFrame {
                 else if (xmp == null)
                     showErrorMsg("No XMP found.");
                 else {
-                    int dividend = Integer.valueOf(txtXMPmtbDividend.getText()),
-                        divisor = Integer.valueOf(txtXMPmtbDivisor.getText());
-                    XMP.Profile selected = xmp.getProfiles()[cboXMPNum.getSelectedIndex()];
-                    selected.setMTB((byte)dividend, (byte)divisor);
-
-                    txtXMPmtbns.setText(String.format("%.3f ns", selected.getMTB().getTime()));
-
                     updateXMPFrequencyText();
 
                     updateXMPTimingsText();
@@ -783,8 +776,12 @@ public class SPDEditorGUI extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             int input = Integer.valueOf(txtXMPFrequencyValue.getText()),
-                num = cboXMPNum.getSelectedIndex();
-            XMP.Profile selected = xmp.getProfiles()[num];
+                dividend = Integer.valueOf(txtXMPmtbDividend.getText()),
+                divisor = Integer.valueOf(txtXMPmtbDivisor.getText());
+            XMP.Profile selected = xmp.getProfile(cboXMPNum.getSelectedIndex());
+
+            selected.setMTB((byte)dividend, (byte)divisor);
+            txtXMPmtbns.setText(String.format("%.3f ns", selected.getMTB().getTime()));
 
             if (rdoCycles.isSelected()) {
                 LinkedHashMap<String, Integer> t = selected.getTimings();
