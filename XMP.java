@@ -53,6 +53,11 @@ public class XMP {
 
     public Profile[] getProfiles() { return profile; }
 
+    public Profile getProfile(int index) {
+        if (index < 0 || index > 1) return null;
+        return profile[index];
+    }
+
     public void setProfile(int index, Profile p) {
         if (index >= 0 && index <= 1 && profile != null) {
             profile[index] = p;
