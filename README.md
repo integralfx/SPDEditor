@@ -4,7 +4,7 @@ Java Swing GUI to edit DDR3 SPD files
 ![Screenshot](https://raw.githubusercontent.com/integralfx/SPDEditor/master/spdeditor.png)
 
 ## Prerequisites
-* At least Java JRE 10
+* At least Java 10
 * An existing SPD file
 
 ## Download
